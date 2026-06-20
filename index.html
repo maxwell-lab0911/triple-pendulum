@@ -17,9 +17,9 @@
             --green:#00ff88;
             --red:#ff3b30;
             --text:#f8f9ff;
-            --text2:#8b92b4;
+            --text2:#a8b0d0;
             --text3:#5a6078;
-            --border:#1e2030;
+            --border:#262a40;
             --grid:rgba(0,229,255,0.045);
         }
         *{margin:0;padding:0;box-sizing:border-box;}
@@ -29,6 +29,8 @@
             font-family:'Rajdhani',-apple-system,BlinkMacSystemFont,sans-serif;
             min-height:100vh;
             overflow-x:hidden;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
         }
         body{
             background:
@@ -59,12 +61,12 @@
             clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
         }
         .brand-title{
-            font-family:'Orbitron',sans-serif;font-size:1.15rem;letter-spacing:3px;font-weight:700;
+            font-family:'Orbitron',sans-serif;font-size:1.2rem;letter-spacing:3px;font-weight:700;
         }
         .brand-title span{color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,0.5);}
         .header-status{
             display:flex;align-items:center;gap:20px;
-            font-family:'Share Tech Mono';font-size:0.82rem;color:var(--text2);
+            font-family:'Share Tech Mono';font-size:0.88rem;color:var(--text2);
         }
         .pill{
             display:flex;align-items:center;gap:8px;
@@ -93,13 +95,20 @@
             min-width:200px;
         }
         .hud-row{display:flex;justify-content:space-between;align-items:center;gap:18px;}
-        .hud-label{font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
-        .hud-val{font-family:'Share Tech Mono';font-size:0.95rem;color:var(--text);}
+        .hud-label{font-size:0.78rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
+        .hud-val{font-family:'Share Tech Mono';font-size:1.02rem;color:var(--text);text-shadow:0 0 6px rgba(0,229,255,0.15);}
         .hud-val.warn{color:var(--amber);}
         .hud-val.err{color:var(--red);}
         .hud-val.ok{color:var(--green);}
         .energy-bar{height:4px;background:var(--bg-elev2);border-radius:2px;margin-top:4px;overflow:hidden;}
         .energy-bar>i{display:block;height:100%;width:0%;background:var(--green);transition:width .2s,background .2s;}
+
+        .btn:active{transform:translateY(1px);}
+        .btn.primary:active{background:#00b8c4;}
+        .preset-btn:active{transform:translateY(1px);}
+        .hud-val{transition:color .2s;}
+        @keyframes pulse{0%{opacity:1;}50%{opacity:0.6;}100%{opacity:1;}}
+        .hud-val.err{animation:pulse 1.5s ease-in-out infinite;}
 
         /* Divergence warning overlay */
         .diverge-overlay{
@@ -118,10 +127,10 @@
             padding:12px;display:flex;flex-direction:column;min-width:0;
         }
         .chart-title{
-            font-family:'Orbitron';font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;
+            font-family:'Orbitron';font-size:0.76rem;letter-spacing:2px;text-transform:uppercase;
             color:var(--cyan);margin-bottom:8px;display:flex;justify-content:space-between;
         }
-        .chart-title .legend{display:flex;gap:12px;font-family:'Rajdhani';font-size:0.65rem;color:var(--text2);text-transform:none;letter-spacing:0.5px;}
+        .chart-title .legend{display:flex;gap:12px;font-family:'Rajdhani';font-size:0.72rem;color:var(--text2);text-transform:none;letter-spacing:0.5px;}
         .chart-title .legend i{font-style:normal;display:flex;align-items:center;gap:5px;}
         .chart-title .legend b{width:8px;height:8px;border-radius:50%;display:inline-block;}
         .chart-canvas{flex:1;position:relative;}
@@ -135,7 +144,7 @@
         .tabs{display:flex;border-bottom:1px solid var(--border);}
         .tab{
             flex:1;padding:13px 8px;text-align:center;
-            font-family:'Orbitron';font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;
+            font-family:'Orbitron';font-size:0.74rem;letter-spacing:1.5px;text-transform:uppercase;
             color:var(--text2);cursor:pointer;transition:all .15s;background:transparent;border:none;
         }
         .tab:hover{color:var(--text);}
@@ -146,13 +155,13 @@
 
         .section{margin-bottom:20px;}
         .section-title{
-            font-family:'Orbitron';font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;
+            font-family:'Orbitron';font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;
             color:var(--cyan);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
         }
         .ctrl{margin-bottom:14px;}
         .ctrl-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-        .ctrl-name{font-size:0.84rem;color:var(--text2);font-weight:600;letter-spacing:0.5px;}
-        .ctrl-val{font-family:'Share Tech Mono';font-size:0.82rem;color:var(--amber);}
+        .ctrl-name{font-size:0.9rem;color:var(--text2);font-weight:600;letter-spacing:0.5px;}
+        .ctrl-val{font-family:'Share Tech Mono';font-size:0.88rem;color:var(--amber);}
         input[type=range]{
             width:100%;height:5px;-webkit-appearance:none;appearance:none;
             background:#1e2130;border-radius:3px;outline:none;cursor:pointer;
@@ -165,7 +174,7 @@
         .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
         .btn{
             padding:11px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-elev2);
-            color:var(--text);font-family:'Orbitron';font-size:0.72rem;letter-spacing:1.2px;text-transform:uppercase;
+            color:var(--text);font-family:'Orbitron';font-size:0.78rem;letter-spacing:1.2px;text-transform:uppercase;
             cursor:pointer;transition:all .15s;font-weight:700;
         }
         .btn:hover{border-color:var(--cyan);color:var(--cyan);}
@@ -174,15 +183,24 @@
         .btn.warn:hover{border-color:var(--magenta);color:var(--magenta);}
         .btn-block{width:100%;margin-bottom:10px;}
 
+        .preset-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;}
+        .preset-btn{
+            padding:6px 4px;border-radius:3px;border:1px solid var(--border);background:var(--bg-elev2);
+            color:var(--text2);font-family:'Share Tech Mono';font-size:0.72rem;cursor:pointer;
+            transition:all .15s;font-weight:600;
+        }
+        .preset-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+        .preset-btn.active{background:var(--cyan);color:#000;border-color:var(--cyan);}
+
         .toggle-list{display:flex;flex-wrap:wrap;gap:8px;}
         .toggle{
             padding:6px 10px;border:1px solid var(--border);border-radius:4px;
-            font-size:0.76rem;color:var(--text2);cursor:pointer;user-select:none;font-weight:600;
+            font-size:0.82rem;color:var(--text2);cursor:pointer;user-select:none;font-weight:600;
         }
         .toggle.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1);}
 
         .info-box{
-            font-size:0.84rem;color:var(--text2);line-height:1.7;
+            font-size:0.9rem;color:var(--text2);line-height:1.7;
             background:var(--bg-elev2);border:1px solid var(--border);border-radius:6px;padding:12px;
         }
         .info-box code{color:var(--amber);background:rgba(255,210,63,0.08);padding:2px 5px;border-radius:3px;font-family:'Share Tech Mono';font-size:0.78rem;}
@@ -190,7 +208,7 @@
         .info-box p:last-child{margin-bottom:0;}
 
         .log{
-            font-family:'Share Tech Mono';font-size:0.74rem;color:var(--text2);line-height:1.6;
+            font-family:'Share Tech Mono';font-size:0.82rem;color:var(--text2);line-height:1.6;
             max-height:200px;overflow-y:auto;
         }
         .log>p{margin-bottom:4px;padding-left:8px;border-left:2px solid transparent;}
@@ -209,12 +227,15 @@
         }
         @media(max-width:768px){
             .header-status{display:none;}
-            .brand-title{font-size:0.95rem;letter-spacing:1.5px;}
+            .brand-title{font-size:1rem;letter-spacing:1.5px;}
             .sidebar{max-height:none;}
             .charts{height:auto;}
-            .float-hud{min-width:160px;padding:8px 10px;}
-            .hud-val{font-size:0.82rem;}
-            .hud-label{font-size:0.65rem;}
+            .float-hud{min-width:170px;padding:10px 12px;}
+            .hud-val{font-size:0.88rem;}
+            .hud-label{font-size:0.7rem;}
+            .log{font-size:0.78rem;}
+            .ctrl-name{font-size:0.84rem;}
+            .btn{font-size:0.74rem;}
         }
     </style>
 </head>
@@ -298,7 +319,13 @@
                             <button class="btn btn-block" id="clearBtn">清除轨迹</button>
                             <div class="ctrl">
                                 <div class="ctrl-hd"><span class="ctrl-name">速度倍率</span><span class="ctrl-val" id="v-speed">1.0×</span></div>
-                                <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+                                <input type="range" id="speed" min="0.1" max="5" step="0.1" value="1">
+                                <div class="preset-row">
+                                    <button class="preset-btn" data-speed="0.5">0.5×</button>
+                                    <button class="preset-btn active" data-speed="1">1×</button>
+                                    <button class="preset-btn" data-speed="2">2×</button>
+                                    <button class="preset-btn" data-speed="5">5×</button>
+                                </div>
                             </div>
                             <div class="ctrl">
                                 <div class="ctrl-hd"><span class="ctrl-name">慢动作</span><span class="ctrl-val" id="v-slow">OFF</span></div>
@@ -413,9 +440,9 @@
     let showTrail = true, showGlow = true, showGrid = false, showCM = true, showVectors = false;
 
     // 自适应积分常量
-    const ADAPT_TOL = 1e-8;
-    const ADAPT_DT_MIN = 1e-6;
-    const ADAPT_DT_MAX = 0.005;
+    const ADAPT_TOL = 1e-10;       // 收紧容差，要求更高精度
+    const ADAPT_DT_MIN = 1e-7;     // 略微提高下限，避免步长过小耗尽步数
+    const ADAPT_DT_MAX = 0.002;    // 减小最大步长，降低单步误差
     const BASE_SPEED = 0.25; // simulation seconds per real second at 1x
 
     // DOM refs
@@ -581,7 +608,7 @@
         if(initialEnergy === null) return s;
         const e = computeEnergy(s);
         const relErr = Math.abs((e.total - initialEnergy) / initialEnergy);
-        if(relErr < 1e-6) return s;
+        if(relErr < 1e-9) return s;   // 收紧跳过阈值，更积极地修正
 
         const [t1,w1,t2,w2,t3,w3] = s;
         const k = kinematics(s);
@@ -593,10 +620,17 @@
         if(KE <= 1e-12) return s;
 
         const targetKE = initialEnergy - e.PE;
-        if(targetKE < 0) return s;
+        if(targetKE < 0){
+            // PE 超过 E0（摆到最高点附近），将角速度限制为微小值而非不修正
+            // 避免能量持续漂移
+            const tinyScale = 0.01;
+            return [t1, w1*tinyScale, t2, w2*tinyScale, t3, w3*tinyScale];
+        }
         const scale = Math.sqrt(targetKE / KE);
         if(!isFinite(scale) || scale <= 0) return s;
-        return [t1, w1*scale, t2, w2*scale, t3, w3*scale];
+        // 限制单次投影幅度，避免过冲
+        const clampedScale = Math.max(0.5, Math.min(2.0, scale));
+        return [t1, w1*clampedScale, t2, w2*clampedScale, t3, w3*clampedScale];
     }
 
     function angularMomentum(s){
@@ -1029,6 +1063,17 @@
             } else {
                 // 物理参数即时生效
             }
+        });
+    });
+
+    // 速度预设按钮
+    document.querySelectorAll('.preset-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+            const v = parseFloat(btn.dataset.speed);
+            document.getElementById('speed').value = v;
+            syncParams(); updateDisplay();
+            document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
         });
     });
 
