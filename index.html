@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS-3P // 三摆混沌动力学终端</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#05050a;
+            --bg-elev:#0b0b12;
+            --bg-elev2:#12121a;
+            --cyan:#00e5ff;
+            --cyan-dim:#00b8c4;
+            --magenta:#ff2d92;
+            --amber:#ffd23f;
+            --green:#00ff88;
+            --red:#ff3b30;
+            --text:#f8f9ff;
+            --text2:#8b92b4;
+            --text3:#5a6078;
+            --border:#1e2030;
+            --grid:rgba(0,229,255,0.045);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{
+            background:var(--bg);
+            color:var(--text);
+            font-family:'Rajdhani',-apple-system,BlinkMacSystemFont,sans-serif;
+            min-height:100vh;
+            overflow-x:hidden;
+        }
+        body{
+            background:
+                radial-gradient(circle at 70% 10%,rgba(0,229,255,0.08),transparent 45%),
+                linear-gradient(var(--grid) 1px,transparent 1px),
+                linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+                var(--bg);
+            background-size:auto,48px 48px,48px 48px,auto;
+        }
+        .app{height:100vh;display:flex;flex-direction:column;}
+
+        /* Header */
+        .header{
+            height:56px;
+            display:flex;align-items:center;justify-content:space-between;
+            padding:0 22px;
+            border-bottom:1px solid var(--border);
+            background:var(--bg-elev);
+        }
+        .brand{display:flex;align-items:center;gap:14px;}
+        .brand-mark{
+            width:28px;height:28px;border:2px solid var(--cyan);border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 0 14px rgba(0,229,255,0.35);
+        }
+        .brand-mark::after{
+            content:'';width:10px;height:10px;background:var(--cyan);
+            clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+        }
+        .brand-title{
+            font-family:'Orbitron',sans-serif;font-size:1.15rem;letter-spacing:3px;font-weight:700;
+        }
+        .brand-title span{color:var(--cyan);text-shadow:0 0 10px rgba(0,229,255,0.5);}
+        .header-status{
+            display:flex;align-items:center;gap:20px;
+            font-family:'Share Tech Mono';font-size:0.82rem;color:var(--text2);
+        }
+        .pill{
+            display:flex;align-items:center;gap:8px;
+            padding:5px 12px;border-radius:4px;background:var(--bg-elev2);border:1px solid var(--border);
+        }
+        .dot{width:7px;height:7px;border-radius:50%;background:var(--text3);}
+        .dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+        .dot.warn{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+        .dot.err{background:var(--red);box-shadow:0 0 8px var(--red);}
+
+        /* Main workspace */
+        .workspace{flex:1;display:flex;min-height:0;}
+
+        /* Viewport */
+        .viewport{flex:1;display:flex;flex-direction:column;min-width:0;padding:16px;gap:14px;}
+        .canvas-wrap{
+            flex:1;position:relative;background:var(--bg-elev);border-radius:6px;border:1px solid var(--border);
+            overflow:hidden;
+        }
+        canvas.main{display:block;width:100%;height:100%;}
+        .float-hud{
+            position:absolute;top:14px;right:14px;
+            display:flex;flex-direction:column;gap:8px;
+            background:rgba(5,5,10,0.78);backdrop-filter:blur(8px);
+            border:1px solid var(--border);border-radius:6px;padding:12px 14px;
+            min-width:200px;
+        }
+        .hud-row{display:flex;justify-content:space-between;align-items:center;gap:18px;}
+        .hud-label{font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
+        .hud-val{font-family:'Share Tech Mono';font-size:0.95rem;color:var(--text);}
+        .hud-val.warn{color:var(--amber);}
+        .hud-val.err{color:var(--red);}
+        .hud-val.ok{color:var(--green);}
+        .energy-bar{height:4px;background:var(--bg-elev2);border-radius:2px;margin-top:4px;overflow:hidden;}
+        .energy-bar>i{display:block;height:100%;width:0%;background:var(--green);transition:width .2s,background .2s;}
+
+        /* Divergence warning overlay */
+        .diverge-overlay{
+            position:absolute;inset:0;display:none;place-items:center;
+            background:rgba(5,5,10,0.88);z-index:20;
+        }
+        .diverge-overlay.show{display:grid;}
+        .diverge-box{text-align:center;}
+        .diverge-box h2{font-family:'Orbitron';font-size:1.6rem;color:var(--red);letter-spacing:2px;margin-bottom:10px;text-shadow:0 0 16px rgba(255,59,48,0.5);}
+        .diverge-box p{color:var(--text2);font-size:0.95rem;margin-bottom:18px;}
+
+        /* Bottom charts */
+        .charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:220px;}
+        .chart-panel{
+            background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;
+            padding:12px;display:flex;flex-direction:column;min-width:0;
+        }
+        .chart-title{
+            font-family:'Orbitron';font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;
+            color:var(--cyan);margin-bottom:8px;display:flex;justify-content:space-between;
+        }
+        .chart-title .legend{display:flex;gap:12px;font-family:'Rajdhani';font-size:0.65rem;color:var(--text2);text-transform:none;letter-spacing:0.5px;}
+        .chart-title .legend i{font-style:normal;display:flex;align-items:center;gap:5px;}
+        .chart-title .legend b{width:8px;height:8px;border-radius:50%;display:inline-block;}
+        .chart-canvas{flex:1;position:relative;}
+        .chart-canvas canvas{position:absolute;inset:0;width:100%;height:100%;}
+
+        /* Sidebar */
+        .sidebar{
+            width:360px;display:flex;flex-direction:column;
+            border-left:1px solid var(--border);background:var(--bg-elev);min-height:0;
+        }
+        .tabs{display:flex;border-bottom:1px solid var(--border);}
+        .tab{
+            flex:1;padding:13px 8px;text-align:center;
+            font-family:'Orbitron';font-size:0.68rem;letter-spacing:1.5px;text-transform:uppercase;
+            color:var(--text2);cursor:pointer;transition:all .15s;background:transparent;border:none;
+        }
+        .tab:hover{color:var(--text);}
+        .tab.active{color:var(--cyan);background:rgba(0,229,255,0.06);box-shadow:inset 0 -2px 0 var(--cyan);}
+        .tab-content{flex:1;overflow-y:auto;padding:16px;}
+        .tab-pane{display:none;}
+        .tab-pane.active{display:block;}
+
+        .section{margin-bottom:20px;}
+        .section-title{
+            font-family:'Orbitron';font-size:0.72rem;letter-spacing:1.5px;text-transform:uppercase;
+            color:var(--cyan);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
+        }
+        .ctrl{margin-bottom:14px;}
+        .ctrl-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+        .ctrl-name{font-size:0.84rem;color:var(--text2);font-weight:600;letter-spacing:0.5px;}
+        .ctrl-val{font-family:'Share Tech Mono';font-size:0.82rem;color:var(--amber);}
+        input[type=range]{
+            width:100%;height:5px;-webkit-appearance:none;appearance:none;
+            background:#1e2130;border-radius:3px;outline:none;cursor:pointer;
+        }
+        input[type=range]::-webkit-slider-thumb{
+            -webkit-appearance:none;width:15px;height:15px;background:var(--cyan);border-radius:50%;
+            box-shadow:0 0 10px var(--cyan);cursor:pointer;
+        }
+
+        .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+        .btn{
+            padding:11px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg-elev2);
+            color:var(--text);font-family:'Orbitron';font-size:0.72rem;letter-spacing:1.2px;text-transform:uppercase;
+            cursor:pointer;transition:all .15s;font-weight:700;
+        }
+        .btn:hover{border-color:var(--cyan);color:var(--cyan);}
+        .btn.primary{background:var(--cyan);color:#000;border-color:var(--cyan);}
+        .btn.primary:hover{background:#33ebff;box-shadow:0 0 16px rgba(0,229,255,0.35);}
+        .btn.warn:hover{border-color:var(--magenta);color:var(--magenta);}
+        .btn-block{width:100%;margin-bottom:10px;}
+
+        .toggle-list{display:flex;flex-wrap:wrap;gap:8px;}
+        .toggle{
+            padding:6px 10px;border:1px solid var(--border);border-radius:4px;
+            font-size:0.76rem;color:var(--text2);cursor:pointer;user-select:none;font-weight:600;
+        }
+        .toggle.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1);}
+
+        .info-box{
+            font-size:0.84rem;color:var(--text2);line-height:1.7;
+            background:var(--bg-elev2);border:1px solid var(--border);border-radius:6px;padding:12px;
+        }
+        .info-box code{color:var(--amber);background:rgba(255,210,63,0.08);padding:2px 5px;border-radius:3px;font-family:'Share Tech Mono';font-size:0.78rem;}
+        .info-box p{margin-bottom:8px;}
+        .info-box p:last-child{margin-bottom:0;}
+
+        .log{
+            font-family:'Share Tech Mono';font-size:0.74rem;color:var(--text2);line-height:1.6;
+            max-height:200px;overflow-y:auto;
+        }
+        .log>p{margin-bottom:4px;padding-left:8px;border-left:2px solid transparent;}
+        .log .i{border-color:var(--cyan-dim);color:var(--cyan-dim);}
+        .log .w{border-color:var(--amber);color:var(--amber);}
+        .log .e{border-color:var(--red);color:var(--red);}
+        .log .s{border-color:var(--green);color:var(--green);}
+
+        @media(max-width:1200px){
+            .workspace{flex-direction:column;}
+            .sidebar{width:100%;border-left:none;border-top:1px solid var(--border);max-height:360px;}
+            .charts{grid-template-columns:1fr;height:auto;}
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="brand">
+                <div class="brand-mark"></div>
+                <div class="brand-title">NEXUS<span>-3P</span></div>
+            </div>
+            <div class="header-status">
+                <div class="pill"><span class="dot ok" id="engineDot"></span> 物理引擎 <span id="engineStatus">ONLINE</span></div>
+                <div class="pill">INTEGRATOR <span id="integStatus">ADAPTIVE RK4</span></div>
+                <div class="pill">FPS <span id="fpsVal">--</span></div>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <div class="viewport">
+                <div class="canvas-wrap">
+                    <canvas class="main" id="mainCanvas" width="1200" height="820"></canvas>
+                    <div class="float-hud">
+                        <div class="hud-row"><span class="hud-label">仿真时间</span><span class="hud-val" id="h-t">0.00 s</span></div>
+                        <div class="hud-row"><span class="hud-label">总能量 E</span><span class="hud-val" id="h-e">0.0000 J</span></div>
+                        <div class="hud-row"><span class="hud-label">能量漂移</span><span class="hud-val" id="h-err">0.0000%</span></div>
+                        <div class="energy-bar"><i id="h-bar"></i></div>
+                        <div class="hud-row"><span class="hud-label">角动量 Lz</span><span class="hud-val" id="h-lz">0.000</span></div>
+                        <div class="hud-row"><span class="hud-label">λ 估计</span><span class="hud-val" id="h-ly">—</span></div>
+                        <div class="hud-row"><span class="hud-label">物理步长</span><span class="hud-val" id="h-dt">—</span></div>
+                    </div>
+                    <div class="diverge-overlay" id="divergeOverlay">
+                        <div class="diverge-box">
+                            <h2>NUMERICAL DIVERGENCE</h2>
+                            <p>状态发散，请调整参数或点击重置。</p>
+                            <button class="btn primary" id="overlayReset">系统重置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts">
+                    <div class="chart-panel">
+                        <div class="chart-title">
+                            相空间相位图
+                            <div class="legend">
+                                <i><b style="background:#00e5ff"></b>θ₁</i>
+                                <i><b style="background:#ff2d92"></b>θ₂</i>
+                                <i><b style="background:#ffd23f"></b>θ₃</i>
+                            </div>
+                        </div>
+                        <div class="chart-canvas"><canvas id="phaseCanvas"></canvas></div>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="chart-title">
+                            能量守恒 / 混沌发散
+                            <div class="legend">
+                                <i><b style="background:#00e5ff"></b>E</i>
+                                <i><b style="background:#00ff88"></b>E₀</i>
+                                <i><b style="background:#ff2d92"></b>log|Δθ₃|</i>
+                            </div>
+                        </div>
+                        <div class="chart-canvas"><canvas id="energyCanvas"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="sidebar">
+                <div class="tabs">
+                    <button class="tab active" data-tab="ctrl">控制</button>
+                    <button class="tab" data-tab="phys">物理</button>
+                    <button class="tab" data-tab="info">信息</button>
+                    <button class="tab" data-tab="log">日志</button>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="tab-ctrl">
+                        <div class="section">
+                            <div class="section-title">仿真控制</div>
+                            <div class="btn-row">
+                                <button class="btn primary" id="startBtn">开始仿真</button>
+                                <button class="btn" id="resetBtn">系统重置</button>
+                            </div>
+                            <button class="btn btn-block" id="clearBtn">清除轨迹</button>
+                            <div class="ctrl">
+                                <div class="ctrl-hd"><span class="ctrl-name">速度倍率</span><span class="ctrl-val" id="v-speed">1.0×</span></div>
+                                <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+                            </div>
+                            <div class="ctrl">
+                                <div class="ctrl-hd"><span class="ctrl-name">慢动作</span><span class="ctrl-val" id="v-slow">OFF</span></div>
+                                <input type="range" id="slow" min="0" max="1" step="1" value="0">
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">视口选项</div>
+                            <div class="toggle-list">
+                                <div class="toggle on" data-tog="trail">轨迹</div>
+                                <div class="toggle on" data-tog="glow">发光</div>
+                                <div class="toggle" data-tog="grid">网格</div>
+                                <div class="toggle on" data-tog="cm">质心</div>
+                                <div class="toggle" data-tog="vectors">速度矢量</div>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">数据</div>
+                            <button class="btn btn-block" id="exportBtn">导出 CSV 数据</button>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-phys">
+                        <div class="section">
+                            <div class="section-title">环境参数</div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">重力 g</span><span class="ctrl-val" id="v-g">9.81 m/s²</span></div><input type="range" id="g" min="0.5" max="25" step="0.01" value="9.81"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">阻尼 b</span><span class="ctrl-val" id="v-damp">0.000</span></div><input type="range" id="damp" min="0" max="0.1" step="0.001" value="0"></div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">质量 / kg</div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">m₁</span><span class="ctrl-val" id="v-m1">1.50</span></div><input type="range" id="m1" min="0.1" max="5" step="0.1" value="1.5"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">m₂</span><span class="ctrl-val" id="v-m2">1.00</span></div><input type="range" id="m2" min="0.1" max="5" step="0.1" value="1"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">m₃</span><span class="ctrl-val" id="v-m3">0.80</span></div><input type="range" id="m3" min="0.1" max="5" step="0.1" value="0.8"></div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">长度 / m</div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">l₁</span><span class="ctrl-val" id="v-l1">1.20</span></div><input type="range" id="l1" min="0.3" max="2" step="0.05" value="1.2"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">l₂</span><span class="ctrl-val" id="v-l2">1.00</span></div><input type="range" id="l2" min="0.3" max="2" step="0.05" value="1"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">l₃</span><span class="ctrl-val" id="v-l3">0.80</span></div><input type="range" id="l3" min="0.3" max="2" step="0.05" value="0.8"></div>
+                        </div>
+                        <div class="section">
+                            <div class="section-title">初始角度 / °</div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">θ₁</span><span class="ctrl-val" id="v-t1">120°</span></div><input type="range" id="t1" min="-180" max="180" step="1" value="120"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">θ₂</span><span class="ctrl-val" id="v-t2">90°</span></div><input type="range" id="t2" min="-180" max="180" step="1" value="90"></div>
+                            <div class="ctrl"><div class="ctrl-hd"><span class="ctrl-name">θ₃</span><span class="ctrl-val" id="v-t3">60°</span></div><input type="range" id="t3" min="-180" max="180" step="1" value="60"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-info">
+                        <div class="info-box">
+                            <p><strong style="color:var(--cyan)">物理模型</strong></p>
+                            <p>三摆由三根无质量刚性杆和三个质点组成。广义坐标 <code>θ₁, θ₂, θ₃</code> 从竖直向下方向测量。</p>
+                            <p>运动方程由拉格朗日方程 <code>L = T − V</code> 导出，写成 <code>M(q)·q̈ + C(q,q̇) + G(q) = 0</code> 形式，其中 <code>M</code> 是 3×3 对称质量矩阵。</p>
+                            <p><strong style="color:var(--cyan)">数值方法</strong></p>
+                            <p>采用<strong>自适应步长 RK4</strong>：通过步长折半估计局部误差，自动在混沌剧烈时缩小步长。每步后使用<strong>能量投影</strong>将总能量校正回初始值，显著抑制长期漂移。</p>
+                            <p>阻尼开启时能量投影自动禁用，因为阻尼会使系统自然耗散能量。</p>
+                            <p><strong style="color:var(--cyan)">混沌指标</strong></p>
+                            <p>李雅普诺夫指数 <code>λ</code> 通过两条初始微扰轨迹的分离速率估算，是定性衡量系统对初值敏感程度的指标。</p>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-log">
+                        <div class="log" id="console"></div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    // NEXUS-3P 三摆物理引擎
+    // 自适应步长 RK4 + 能量投影 + 数值守护
+    // ============================================================
+    const PI = Math.PI;
+    const TAU = 2 * PI;
+
+    // 参数
+    let P = {
+        m1:1.5, m2:1.0, m3:0.8,
+        l1:1.2, l2:1.0, l3:0.8,
+        g:9.81, damp:0.0,
+        theta1:120*PI/180, theta2:90*PI/180, theta3:60*PI/180
+    };
+
+    let state = [];
+    let chaosState = [];
+    const CHAOS_EPS = 1e-7;
+
+    // 历史
+    let trail = [];
+    let cmTrail = [];
+    let phaseHistory = [];
+    let energyHistory = [];
+    let chaosLog = [];
+    let dataRecords = []; // for CSV export
+
+    // 运行状态
+    let simTime = 0;
+    let initialEnergy = null;
+    let lyapSum = 0, lyapN = 0;
+    let running = false;
+    let slowMode = false;
+    let speedMul = 1.0;
+    let animId = null;
+    let lastFrame = performance.now();
+    let fps = 0;
+    let currentDt = 0.001;
+    let diverged = false;
+
+    // 视口
+    let showTrail = true, showGlow = true, showGrid = false, showCM = true, showVectors = false;
+
+    // 自适应积分常量
+    const ADAPT_TOL = 1e-8;
+    const ADAPT_DT_MIN = 1e-6;
+    const ADAPT_DT_MAX = 0.005;
+    const BASE_SPEED = 0.25; // simulation seconds per real second at 1x
+
+    // DOM refs
+    const mainC = document.getElementById('mainCanvas');
+    const mainCtx = mainC.getContext('2d');
+    const phaseC = document.getElementById('phaseCanvas');
+    const phaseCtx = phaseC.getContext('2d');
+    const energyC = document.getElementById('energyCanvas');
+    const energyCtx = energyC.getContext('2d');
+
+    function resizeCanvases(){
+        const phaseWrap = phaseC.parentElement;
+        phaseC.width = phaseWrap.clientWidth;
+        phaseC.height = phaseWrap.clientHeight;
+        const energyWrap = energyC.parentElement;
+        energyC.width = energyWrap.clientWidth;
+        energyC.height = energyWrap.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
+
+    // 控制台
+    function log(msg, type='i'){
+        const c = document.getElementById('console');
+        const p = document.createElement('p');
+        p.className = type;
+        const t = simTime ? simTime.toFixed(2) : '0.00';
+        p.textContent = `[${t}s] ${msg}`;
+        c.appendChild(p);
+        c.scrollTop = c.scrollHeight;
+        if(c.children.length > 60) c.removeChild(c.firstChild);
+    }
+
+    // ============================================================
+    // 物理核心
+    // ============================================================
+
+    function kinematics(s){
+        const [t1,w1,t2,w2,t3,w3] = s;
+        const {l1,l2,l3} = P;
+        const s1=Math.sin(t1), c1=Math.cos(t1);
+        const s2=Math.sin(t2), c2=Math.cos(t2);
+        const s3=Math.sin(t3), c3=Math.cos(t3);
+
+        const x1 = l1*s1, y1 = l1*c1;
+        const x2 = x1 + l2*s2, y2 = y1 + l2*c2;
+        const x3 = x2 + l3*s3, y3 = y2 + l3*c3;
+
+        const v1x = l1*w1*c1, v1y = -l1*w1*s1;
+        const v2x = v1x + l2*w2*c2, v2y = v1y - l2*w2*s2;
+        const v3x = v2x + l3*w3*c3, v3y = v2y - l3*w3*s3;
+
+        return {x1,y1,x2,y2,x3,y3,v1x,v1y,v2x,v2y,v3x,v3y};
+    }
+
+    function computeDerivatives(s, p){
+        const [t1,w1,t2,w2,t3,w3] = s;
+        const {m1,m2,m3,l1,l2,l3,g,damp} = p;
+
+        const c1=Math.cos(t1), s1=Math.sin(t1);
+        const c2=Math.cos(t2), s2=Math.sin(t2);
+        const c3=Math.cos(t3), s3=Math.sin(t3);
+        const c12=Math.cos(t1-t2), s12=Math.sin(t1-t2);
+        const c13=Math.cos(t1-t3), s13=Math.sin(t1-t3);
+        const c23=Math.cos(t2-t3), s23=Math.sin(t2-t3);
+
+        const M11 = (m1+m2+m3)*l1*l1;
+        const M22 = (m2+m3)*l2*l2;
+        const M33 = m3*l3*l3;
+        const M12 = (m2+m3)*l1*l2*c12;
+        const M13 = m3*l1*l3*c13;
+        const M23 = m3*l2*l3*c23;
+
+        const b1 = -(m2+m3)*l1*l2*s12*w2*w2 - m3*l1*l3*s13*w3*w3 - (m1+m2+m3)*g*l1*s1;
+        const b2 =  (m2+m3)*l1*l2*s12*w1*w1 - m3*l2*l3*s23*w3*w3 - (m2+m3)*g*l2*s2;
+        const b3 =  m3*l1*l3*s13*w1*w1 + m3*l2*l3*s23*w2*w2 - m3*g*l3*s3;
+
+        const detM = M11*(M22*M33 - M23*M23)
+                   - M12*(M12*M33 - M23*M13)
+                   + M13*(M12*M23 - M22*M13);
+
+        if(!isFinite(detM) || Math.abs(detM) < 1e-14){
+            return [w1,0,w2,0,w3,0];
+        }
+
+        const a1 = ( b1*(M22*M33 - M23*M23)
+                   - M12*(b2*M33 - M23*b3)
+                   + M13*(b2*M23 - M22*b3)) / detM;
+
+        const a2 = ( M11*(b2*M33 - M23*b3)
+                   - b1*(M12*M33 - M23*M13)
+                   + M13*(M12*b3 - b2*M13)) / detM;
+
+        const a3 = ( M11*(M22*b3 - M23*b2)
+                   - M12*(M12*b3 - M23*b1)
+                   + b1*(M12*M23 - M22*M13)) / detM;
+
+        return [w1, a1 - damp*w1, w2, a2 - damp*w2, w3, a3 - damp*w3];
+    }
+
+    function rk4(s, dt, p){
+        const k1 = computeDerivatives(s, p);
+        const s2 = s.map((v,i)=>v + k1[i]*dt*0.5);
+        const k2 = computeDerivatives(s2, p);
+        const s3 = s.map((v,i)=>v + k2[i]*dt*0.5);
+        const k3 = computeDerivatives(s3, p);
+        const s4 = s.map((v,i)=>v + k3[i]*dt);
+        const k4 = computeDerivatives(s4, p);
+        return s.map((v,i)=>v + (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])*dt/6);
+    }
+
+    // 自适应步长：用步长折半法估计误差
+    function adaptiveStep(s, dt, p){
+        const y1 = rk4(s, dt, p);
+        const yh = rk4(s, dt*0.5, p);
+        const y2 = rk4(yh, dt*0.5, p);
+
+        let maxErr = 0;
+        for(let i=0;i<6;i++){
+            const diff = Math.abs(y1[i] - y2[i]);
+            const scale = Math.abs(s[i]) + Math.abs(y2[i]) + 1e-6;
+            maxErr = Math.max(maxErr, diff / scale);
+        }
+        maxErr = maxErr / 15; // 2^4 - 1
+
+        let dtNext;
+        if(maxErr === 0) dtNext = dt * 2;
+        else dtNext = dt * Math.min(2, Math.max(0.5, 0.9 * Math.sqrt(ADAPT_TOL / maxErr)));
+        dtNext = Math.max(ADAPT_DT_MIN, Math.min(ADAPT_DT_MAX, dtNext));
+
+        if(maxErr <= ADAPT_TOL || dt <= ADAPT_DT_MIN*1.1){
+            return {state:y2, dtNext};
+        }
+        return adaptiveStep(s, dt*0.5, p);
+    }
+
+    // 能量
+    function computeEnergy(s){
+        const k = kinematics(s);
+        const {m1,m2,m3,l1,l2,l3,g} = P;
+        const [t1,,t2,,t3] = s;
+        const v1sq = k.v1x*k.v1x + k.v1y*k.v1y;
+        const v2sq = k.v2x*k.v2x + k.v2y*k.v2y;
+        const v3sq = k.v3x*k.v3x + k.v3y*k.v3y;
+        const KE = 0.5*m1*v1sq + 0.5*m2*v2sq + 0.5*m3*v3sq;
+        const PE = -m1*g*l1*Math.cos(t1) - m2*g*(l1*Math.cos(t1)+l2*Math.cos(t2)) - m3*g*(l1*Math.cos(t1)+l2*Math.cos(t2)+l3*Math.cos(t3));
+        return {KE, PE, total:KE+PE};
+    }
+
+    // 能量投影：按比例缩放角速度使总能量回到 E0
+    function energyProjection(s){
+        if(P.damp > 1e-6) return s; // 有阻尼时不投影
+        if(initialEnergy === null) return s;
+        const e = computeEnergy(s);
+        const relErr = Math.abs((e.total - initialEnergy) / initialEnergy);
+        if(relErr < 1e-6) return s;
+
+        const [t1,w1,t2,w2,t3,w3] = s;
+        const k = kinematics(s);
+        const {m1,m2,m3} = P;
+        const v1sq = k.v1x*k.v1x + k.v1y*k.v1y;
+        const v2sq = k.v2x*k.v2x + k.v2y*k.v2y;
+        const v3sq = k.v3x*k.v3x + k.v3y*k.v3y;
+        const KE = 0.5*m1*v1sq + 0.5*m2*v2sq + 0.5*m3*v3sq;
+        if(KE <= 1e-12) return s;
+
+        const targetKE = initialEnergy - e.PE;
+        if(targetKE < 0) return s;
+        const scale = Math.sqrt(targetKE / KE);
+        if(!isFinite(scale) || scale <= 0) return s;
+        return [t1, w1*scale, t2, w2*scale, t3, w3*scale];
+    }
+
+    function angularMomentum(s){
+        const k = kinematics(s);
+        const {m1,m2,m3} = P;
+        const L1 = m1*(k.x1*k.v1y - k.y1*k.v1x);
+        const L2 = m2*(k.x2*k.v2y - k.y2*k.v2x);
+        const L3 = m3*(k.x3*k.v3y - k.y3*k.v3x);
+        return L1 + L2 + L3;
+    }
+
+    function centerOfMass(s){
+        const k = kinematics(s);
+        const {m1,m2,m3} = P;
+        const M = m1+m2+m3;
+        return {x:(m1*k.x1+m2*k.x2+m3*k.x3)/M, y:(m1*k.y1+m2*k.y2+m3*k.y3)/M};
+    }
+
+    function isFiniteState(s){
+        return s.every(v => isFinite(v));
+    }
+
+    // ============================================================
+    // 可视化
+    // ============================================================
+
+    function worldToScreen(pos, scale, cx, cy){
+        return {x: cx + pos.x*scale, y: cy + pos.y*scale};
+    }
+
+    function drawMain(){
+        const w = mainC.width, h = mainC.height;
+        mainCtx.fillStyle = '#030306';
+        mainCtx.fillRect(0,0,w,h);
+
+        const totalLen = P.l1+P.l2+P.l3;
+        const scale = Math.min(w,h) / (2.6*totalLen);
+        const cx = w/2, cy = h/6;
+        const k = kinematics(state);
+        const p3s = worldToScreen({x:k.x3,y:k.y3}, scale, cx, cy);
+
+        if(showGrid){
+            mainCtx.strokeStyle = 'rgba(0,229,255,0.04)';
+            mainCtx.lineWidth = 0.5;
+            const gs = 48;
+            for(let x=(cx%gs);x<w;x+=gs){mainCtx.beginPath();mainCtx.moveTo(x,0);mainCtx.lineTo(x,h);mainCtx.stroke();}
+            for(let y=(cy%gs);y<h;y+=gs){mainCtx.beginPath();mainCtx.moveTo(0,y);mainCtx.lineTo(w,y);mainCtx.stroke();}
+        }
+
+        if(showCM && cmTrail.length>1){
+            mainCtx.lineWidth = 1;
+            for(let i=1;i<cmTrail.length;i++){
+                const a = i/cmTrail.length;
+                mainCtx.strokeStyle = `rgba(0,255,136,${a*0.55})`;
+                const p1 = worldToScreen(cmTrail[i-1], scale, cx, cy);
+                const p2 = worldToScreen(cmTrail[i], scale, cx, cy);
+                mainCtx.beginPath();mainCtx.moveTo(p1.x,p1.y);mainCtx.lineTo(p2.x,p2.y);mainCtx.stroke();
+            }
+        }
+
+        if(showTrail && trail.length>1){
+            mainCtx.lineWidth = 1.5;
+            for(let i=1;i<trail.length;i++){
+                const a = i/trail.length;
+                const hue = 190 + (i/trail.length)*70;
+                mainCtx.strokeStyle = `hsla(${hue},100%,58%,${a*0.7})`;
+                const p1 = worldToScreen(trail[i-1], scale, cx, cy);
+                const p2 = worldToScreen(trail[i], scale, cx, cy);
+                mainCtx.beginPath();mainCtx.moveTo(p1.x,p1.y);mainCtx.lineTo(p2.x,p2.y);mainCtx.stroke();
+            }
+        }
+
+        if(showVectors){
+            const p1 = worldToScreen({x:k.x1,y:k.y1}, scale, cx, cy);
+            const p2 = worldToScreen({x:k.x2,y:k.y2}, scale, cx, cy);
+            const p3 = worldToScreen({x:k.x3,y:k.y3}, scale, cx, cy);
+            drawVector(p1.x,p1.y,k.v1x,k.v1y,scale,'#00e5ff');
+            drawVector(p2.x,p2.y,k.v2x,k.v2y,scale,'#ff2d92');
+            drawVector(p3.x,p3.y,k.v3x,k.v3y,scale,'#ffd23f');
+        }
+
+        mainCtx.fillStyle = '#ff2d92';
+        mainCtx.shadowBlur = showGlow?18:0;
+        mainCtx.shadowColor = '#ff2d92';
+        mainCtx.beginPath();mainCtx.arc(cx,cy,5,0,TAU);mainCtx.fill();
+        mainCtx.shadowBlur = 0;
+
+        const s1 = worldToScreen({x:k.x1,y:k.y1}, scale, cx, cy);
+        const s2 = worldToScreen({x:k.x2,y:k.y2}, scale, cx, cy);
+        mainCtx.strokeStyle = 'rgba(210,215,230,0.85)';
+        mainCtx.lineWidth = 2.5;
+        mainCtx.lineCap = 'round';
+        mainCtx.beginPath();
+        mainCtx.moveTo(cx,cy);mainCtx.lineTo(s1.x,s1.y);mainCtx.lineTo(s2.x,s2.y);mainCtx.lineTo(p3s.x,p3s.y);
+        mainCtx.stroke();
+
+        [s1,s2].forEach(p=>{
+            mainCtx.fillStyle = 'rgba(210,215,230,0.55)';
+            mainCtx.beginPath();mainCtx.arc(p.x,p.y,3,0,TAU);mainCtx.fill();
+        });
+
+        const balls = [
+            {p:{x:k.x1,y:k.y1}, m:P.m1, color:'#00e5ff'},
+            {p:{x:k.x2,y:k.y2}, m:P.m2, color:'#ff2d92'},
+            {p:{x:k.x3,y:k.y3}, m:P.m3, color:'#ffd23f'}
+        ];
+        for(const b of balls){
+            const sp = worldToScreen(b.p, scale, cx, cy);
+            const r = 5 + b.m*5;
+            if(showGlow){
+                const grad = mainCtx.createRadialGradient(sp.x,sp.y,0,sp.x,sp.y,r*2.5);
+                grad.addColorStop(0,b.color+'ff');
+                grad.addColorStop(0.4,b.color+'55');
+                grad.addColorStop(1,'transparent');
+                mainCtx.fillStyle = grad;
+                mainCtx.beginPath();mainCtx.arc(sp.x,sp.y,r*2.5,0,TAU);mainCtx.fill();
+            }
+            mainCtx.fillStyle = b.color;
+            mainCtx.shadowBlur = showGlow?14:0;
+            mainCtx.shadowColor = b.color;
+            mainCtx.beginPath();mainCtx.arc(sp.x,sp.y,r,0,TAU);mainCtx.fill();
+            mainCtx.shadowBlur = 0;
+            mainCtx.strokeStyle = '#fff';mainCtx.lineWidth=1;
+            mainCtx.beginPath();mainCtx.arc(sp.x,sp.y,r,0,TAU);mainCtx.stroke();
+        }
+
+        if(showCM){
+            const cm = centerOfMass(state);
+            const cmp = worldToScreen(cm, scale, cx, cy);
+            mainCtx.fillStyle = '#00ff88';
+            mainCtx.shadowBlur = showGlow?10:0;
+            mainCtx.shadowColor = '#00ff88';
+            mainCtx.beginPath();mainCtx.arc(cmp.x,cmp.y,4,0,TAU);mainCtx.fill();
+            mainCtx.shadowBlur = 0;
+        }
+
+        mainCtx.fillStyle = 'rgba(0,229,255,0.65)';
+        mainCtx.font = '12px Share Tech Mono';
+        mainCtx.fillText('G ↓', cx+8, cy-10);
+    }
+
+    function drawVector(x,y,vx,vy,scale,color){
+        const len = Math.sqrt(vx*vx+vy*vy);
+        if(len < 0.01) return;
+        const s = 0.08;
+        mainCtx.strokeStyle = color;
+        mainCtx.lineWidth = 1;
+        mainCtx.globalAlpha = 0.65;
+        mainCtx.beginPath();
+        mainCtx.moveTo(x,y);
+        mainCtx.lineTo(x+vx*s*scale, y+vy*s*scale);
+        mainCtx.stroke();
+        mainCtx.globalAlpha = 1;
+    }
+
+    function drawPhase(){
+        const w=phaseC.width, h=phaseC.height;
+        if(!w || !h) return;
+        phaseCtx.fillStyle='#030306';phaseCtx.fillRect(0,0,w,h);
+
+        // axes
+        phaseCtx.strokeStyle='rgba(0,229,255,0.06)';phaseCtx.lineWidth=0.5;
+        for(let i=0;i<=8;i++){const x=(w/8)*i,y=(h/8)*i;phaseCtx.beginPath();phaseCtx.moveTo(x,0);phaseCtx.lineTo(x,h);phaseCtx.stroke();phaseCtx.beginPath();phaseCtx.moveTo(0,y);phaseCtx.lineTo(w,y);phaseCtx.stroke();}
+        phaseCtx.strokeStyle='rgba(120,130,160,0.25)';
+        phaseCtx.beginPath();phaseCtx.moveTo(w/2,0);phaseCtx.lineTo(w/2,h);phaseCtx.stroke();
+        phaseCtx.beginPath();phaseCtx.moveTo(0,h/2);phaseCtx.lineTo(w,h/2);phaseCtx.stroke();
+
+        if(phaseHistory.length<2) return;
+        let maxW=4; phaseHistory.forEach(d=>{maxW=Math.max(maxW,Math.abs(d.w1),Math.abs(d.w2),Math.abs(d.w3));});
+
+        const colors=['#00e5ff','#ff2d92','#ffd23f'];
+        const idxs=['w1','w2','w3'];
+        for(let k=0;k<3;k++){
+            phaseCtx.strokeStyle=colors[k];phaseCtx.lineWidth=1.2;phaseCtx.beginPath();
+            for(let i=0;i<phaseHistory.length;i++){
+                const th = phaseHistory[i][`t${k+1}`];
+                const wv = phaseHistory[i][idxs[k]];
+                const x=(( ((th%TAU)+TAU)%TAU )/TAU)*w;
+                const y=h-((wv+maxW)/(2*maxW))*h;
+                if(i===0)phaseCtx.moveTo(x,y);else phaseCtx.lineTo(x,y);
+            }
+            phaseCtx.stroke();
+        }
+    }
+
+    function drawEnergy(){
+        const w=energyC.width, h=energyC.height;
+        if(!w || !h) return;
+        energyCtx.fillStyle='#030306';energyCtx.fillRect(0,0,w,h);
+
+        energyCtx.strokeStyle='rgba(0,229,255,0.06)';energyCtx.lineWidth=0.5;
+        for(let i=0;i<=6;i++){const y=(h/6)*i;energyCtx.beginPath();energyCtx.moveTo(0,y);energyCtx.lineTo(w,y);energyCtx.stroke();}
+
+        if(energyHistory.length<2) return;
+
+        // energy range
+        let minE=Infinity, maxE=-Infinity;
+        energyHistory.forEach(d=>{minE=Math.min(minE,d.E);maxE=Math.max(maxE,d.E);});
+        if(initialEnergy!==null){minE=Math.min(minE,initialEnergy);maxE=Math.max(maxE,initialEnergy);}
+        const rng = Math.max(maxE-minE, 0.01);
+        const mapY = (E)=> h - ((E-minE)/rng)*h*0.85 - h*0.075;
+
+        // total energy curve
+        energyCtx.strokeStyle='#00e5ff';energyCtx.lineWidth=1.5;energyCtx.beginPath();
+        for(let i=0;i<energyHistory.length;i++){
+            const x=(i/energyHistory.length)*w;
+            const y=mapY(energyHistory[i].E);
+            if(i===0)energyCtx.moveTo(x,y);else energyCtx.lineTo(x,y);
+        }energyCtx.stroke();
+
+        // initial energy reference
+        if(initialEnergy!==null){
+            const y0=mapY(initialEnergy);
+            energyCtx.strokeStyle='rgba(0,255,136,0.5)';energyCtx.setLineDash([5,5]);energyCtx.lineWidth=1;
+            energyCtx.beginPath();energyCtx.moveTo(0,y0);energyCtx.lineTo(w,y0);energyCtx.stroke();energyCtx.setLineDash([]);
+        }
+
+        // chaos curve (right axis)
+        if(chaosLog.length>1){
+            const yMin=-12, yMax=2;
+            energyCtx.strokeStyle='#ff2d92';energyCtx.lineWidth=1;energyCtx.globalAlpha=0.7;energyCtx.beginPath();
+            for(let i=0;i<chaosLog.length;i++){
+                const x=(i/chaosLog.length)*w;
+                const y=h-((chaosLog[i]-yMin)/(yMax-yMin))*h;
+                if(i===0)energyCtx.moveTo(x,y);else energyCtx.lineTo(x,y);
+            }energyCtx.stroke();energyCtx.globalAlpha=1;
+        }
+    }
+
+    function updateStats(){
+        const e = computeEnergy(state);
+        const Lz = angularMomentum(state);
+        if(initialEnergy===null) initialEnergy = e.total;
+        const err = Math.abs((e.total-initialEnergy)/Math.abs(initialEnergy))*100;
+
+        document.getElementById('h-t').textContent = simTime.toFixed(2)+' s';
+        document.getElementById('h-e').textContent = e.total.toFixed(4)+' J';
+        const errEl = document.getElementById('h-err');
+        errEl.textContent = err.toFixed(4)+'%';
+        errEl.className = 'hud-val ' + (err<0.01?'ok':err<0.1?'warn':'err');
+        document.getElementById('h-lz').textContent = Lz.toFixed(3);
+        document.getElementById('h-dt').textContent = currentDt ? currentDt.toExponential(2)+' s' : '—';
+
+        const bar = document.getElementById('h-bar');
+        const barPct = Math.min(err*100, 100);
+        bar.style.width = barPct+'%';
+        bar.style.background = err<0.01?'var(--green)':err<0.1?'var(--amber)':'var(--red)';
+
+        // lyap estimate
+        let lam = '—';
+        if(lyapN>10){
+            const avg = lyapSum/lyapN;
+            if(isFinite(avg)) lam = avg.toFixed(2);
+        }
+        document.getElementById('h-ly').textContent = lam;
+
+        // header status
+        const dot = document.getElementById('engineDot');
+        const status = document.getElementById('engineStatus');
+        if(diverged){dot.className='dot err';status.textContent='DIVERGED';status.style.color='var(--red)';}
+        else if(err<0.01){dot.className='dot ok';status.textContent='STABLE';status.style.color='var(--green)';}
+        else if(err<0.1){dot.className='dot warn';status.textContent='ACCEPTABLE';status.style.color='var(--amber)';}
+        else{dot.className='dot err';status.textContent='DRIFTING';status.style.color='var(--red)';}
+    }
+
+    // ============================================================
+    // 主循环
+    // ============================================================
+
+    function init(){
+        state = [P.theta1, 0, P.theta2, 0, P.theta3, 0];
+        chaosState = [P.theta1 + CHAOS_EPS, 0, P.theta2 - CHAOS_EPS*0.5, 0, P.theta3 + CHAOS_EPS*0.3, 0];
+        trail=[]; cmTrail=[]; phaseHistory=[]; energyHistory=[]; chaosLog=[]; dataRecords=[];
+        simTime=0; initialEnergy=null; lyapSum=0; lyapN=0;
+        currentDt=0.001; diverged=false;
+        document.getElementById('divergeOverlay').classList.remove('show');
+
+        const k=kinematics(state);
+        trail.push({x:k.x3,y:k.y3});
+        cmTrail.push(centerOfMass(state));
+
+        updateStats(); drawMain(); drawPhase(); drawEnergy();
+        log('系统初始化。自适应 RK4 + 能量投影已就绪。','s');
+    }
+
+    function stepPhysics(targetDelta){
+        let remaining = targetDelta;
+        let steps = 0;
+        while(remaining > 1e-12 && steps < 1000){
+            let dt = Math.min(currentDt, remaining);
+            const res = adaptiveStep(state, dt, P);
+            state = energyProjection(res.state);
+
+            const res2 = adaptiveStep(chaosState, dt, P);
+            chaosState = energyProjection(res2.state);
+
+            currentDt = Math.min(res.dtNext, res2.dtNext);
+            simTime += dt;
+            remaining -= dt;
+            steps++;
+            recordHistory();
+
+            if(!isFiniteState(state) || !isFiniteState(chaosState)){
+                diverged = true;
+                return;
+            }
+        }
+    }
+
+    function recordHistory(){
+        const k = kinematics(state);
+        trail.push({x:k.x3,y:k.y3});
+        cmTrail.push(centerOfMass(state));
+        phaseHistory.push({t1:state[0],w1:state[1],t2:state[2],w2:state[3],t3:state[4],w3:state[5]});
+
+        const e = computeEnergy(state);
+        energyHistory.push({E:e.total,t:simTime});
+
+        const diff = Math.abs(state[4]-chaosState[4]);
+        chaosLog.push(Math.log(diff+1e-15));
+        if(diff > 1e-12 && simTime > 0.3){
+            lyapSum += Math.log(diff / CHAOS_EPS) / simTime;
+            lyapN++;
+        }
+
+        dataRecords.push({
+            t:simTime,
+            t1:state[0], w1:state[1],
+            t2:state[2], w2:state[3],
+            t3:state[4], w3:state[5],
+            E:e.total, Lz:angularMomentum(state)
+        });
+    }
+
+    function trimHistory(){
+        if(trail.length>5000) trail=trail.slice(-5000);
+        if(cmTrail.length>2500) cmTrail=cmTrail.slice(-2500);
+        if(phaseHistory.length>6000) phaseHistory=phaseHistory.slice(-6000);
+        if(energyHistory.length>4000) energyHistory=energyHistory.slice(-4000);
+        if(chaosLog.length>4000) chaosLog=chaosLog.slice(-4000);
+        if(dataRecords.length>10000) dataRecords=dataRecords.slice(-10000);
+    }
+
+    function animate(now){
+        if(!running){
+            animId = null;
+            return;
+        }
+        const elapsed = Math.min((now-lastFrame)/1000, 0.1);
+        lastFrame = now;
+        fps = Math.round(1/Math.max(elapsed,0.001));
+        document.getElementById('fpsVal').textContent = fps;
+
+        if(!diverged){
+            const targetDelta = speedMul * elapsed * BASE_SPEED * (slowMode?0.1:1);
+            stepPhysics(targetDelta);
+            trimHistory();
+        }
+
+        drawMain(); drawPhase(); drawEnergy(); updateStats();
+
+        if(diverged){
+            running = false;
+            document.getElementById('divergeOverlay').classList.add('show');
+            document.getElementById('startBtn').textContent = '继续仿真';
+            document.getElementById('startBtn').classList.remove('primary');
+            log('数值发散，仿真已暂停。','e');
+            animId = null;
+            return;
+        }
+
+        animId = requestAnimationFrame(animate);
+    }
+
+    // ============================================================
+    // 交互
+    // ============================================================
+
+    function updateDisplay(){
+        document.getElementById('v-speed').textContent = parseFloat(document.getElementById('speed').value).toFixed(1)+'×';
+        document.getElementById('v-slow').textContent = parseInt(document.getElementById('slow').value)?'ON':'OFF';
+        document.getElementById('v-g').textContent = parseFloat(document.getElementById('g').value).toFixed(2)+' m/s²';
+        document.getElementById('v-damp').textContent = parseFloat(document.getElementById('damp').value).toFixed(3);
+        document.getElementById('v-m1').textContent = parseFloat(document.getElementById('m1').value).toFixed(2);
+        document.getElementById('v-m2').textContent = parseFloat(document.getElementById('m2').value).toFixed(2);
+        document.getElementById('v-m3').textContent = parseFloat(document.getElementById('m3').value).toFixed(2);
+        document.getElementById('v-l1').textContent = parseFloat(document.getElementById('l1').value).toFixed(2);
+        document.getElementById('v-l2').textContent = parseFloat(document.getElementById('l2').value).toFixed(2);
+        document.getElementById('v-l3').textContent = parseFloat(document.getElementById('l3').value).toFixed(2);
+        document.getElementById('v-t1').textContent = document.getElementById('t1').value+'°';
+        document.getElementById('v-t2').textContent = document.getElementById('t2').value+'°';
+        document.getElementById('v-t3').textContent = document.getElementById('t3').value+'°';
+    }
+
+    function syncParams(){
+        speedMul = parseFloat(document.getElementById('speed').value);
+        slowMode = parseInt(document.getElementById('slow').value) === 1;
+        P.g = parseFloat(document.getElementById('g').value);
+        P.damp = parseFloat(document.getElementById('damp').value);
+        P.m1 = parseFloat(document.getElementById('m1').value);
+        P.m2 = parseFloat(document.getElementById('m2').value);
+        P.m3 = parseFloat(document.getElementById('m3').value);
+        P.l1 = parseFloat(document.getElementById('l1').value);
+        P.l2 = parseFloat(document.getElementById('l2').value);
+        P.l3 = parseFloat(document.getElementById('l3').value);
+        P.theta1 = parseFloat(document.getElementById('t1').value)*PI/180;
+        P.theta2 = parseFloat(document.getElementById('t2').value)*PI/180;
+        P.theta3 = parseFloat(document.getElementById('t3').value)*PI/180;
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab=>{
+        tab.addEventListener('click', ()=>{
+            document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Sliders
+    document.querySelectorAll('input[type="range"]').forEach(el=>{
+        el.addEventListener('input', ()=>{
+            syncParams(); updateDisplay();
+            if(el.id.startsWith('t')){
+                // 初始角度只在非运行时立即生效并重置
+                if(!running) init();
+            } else if(el.id === 'speed' || el.id === 'slow'){
+                // 速度即时生效
+            } else {
+                // 物理参数即时生效
+            }
+        });
+    });
+
+    // Buttons
+    document.getElementById('startBtn').addEventListener('click', ()=>{
+        if(diverged){
+            // 发散后继续需要先重置
+            syncParams(); init(); diverged=false;
+        }
+        running = !running;
+        const btn = document.getElementById('startBtn');
+        btn.textContent = running ? '暂停仿真' : '继续仿真';
+        btn.classList.toggle('primary', running);
+        if(running){ lastFrame=performance.now(); animate(lastFrame); }
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+        running=false;
+        if(animId) cancelAnimationFrame(animId);
+        syncParams(); init();
+        const btn = document.getElementById('startBtn');
+        btn.textContent='开始仿真'; btn.classList.add('primary');
+    });
+
+    document.getElementById('overlayReset').addEventListener('click', ()=>{
+        running=false;
+        if(animId) cancelAnimationFrame(animId);
+        syncParams(); init();
+        const btn = document.getElementById('startBtn');
+        btn.textContent='开始仿真'; btn.classList.add('primary');
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', ()=>{
+        trail=[]; cmTrail=[]; phaseHistory=[]; energyHistory=[]; chaosLog=[]; dataRecords=[];
+        initialEnergy=null; lyapSum=0; lyapN=0; currentDt=0.001; diverged=false;
+        document.getElementById('divergeOverlay').classList.remove('show');
+        updateStats(); drawMain(); drawPhase(); drawEnergy();
+        log('轨迹与历史数据已清除。','w');
+    });
+
+    // Toggles
+    document.querySelectorAll('.toggle').forEach(tog=>{
+        tog.addEventListener('click', ()=>{
+            const key = tog.dataset.tog;
+            const map={trail:'showTrail',glow:'showGlow',grid:'showGrid',cm:'showCM',vectors:'showVectors'};
+            window[map[key]] = !window[map[key]];
+            tog.classList.toggle('on', window[map[key]]);
+        });
+    });
+
+    // Export CSV
+    document.getElementById('exportBtn').addEventListener('click', ()=>{
+        if(dataRecords.length===0){log('无数据可导出。','w');return;}
+        let csv='t,theta1,omega1,theta2,omega2,theta3,omega3,energy,Lz\n';
+        dataRecords.forEach(r=>{
+            csv += `${r.t.toFixed(5)},${r.t1.toFixed(6)},${r.w1.toFixed(6)},${r.t2.toFixed(6)},${r.w2.toFixed(6)},${r.t3.toFixed(6)},${r.w3.toFixed(6)},${r.E.toFixed(6)},${r.Lz.toFixed(6)}\n`;
+        });
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nexus3p_data_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        log(`已导出 ${dataRecords.length} 条数据。`,'s');
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', e=>{
+        if(e.target.tagName === 'INPUT') return;
+        if(e.code === 'Space'){
+            e.preventDefault();
+            document.getElementById('startBtn').click();
+        } else if(e.code === 'KeyR'){
+            document.getElementById('resetBtn').click();
+        }
+    });
+
+    // Init
+    syncParams(); updateDisplay(); init();
+    </script>
+</body>
+</html>
