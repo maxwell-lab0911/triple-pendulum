@@ -439,8 +439,10 @@
         energyC.width = energyWrap.clientWidth;
         energyC.height = energyWrap.clientHeight;
 
-        // 重绘一次，避免 resize 期间画面空白或变形
-        drawMain(); drawPhase(); drawEnergy(); updateStats();
+        // 仅在 state 已初始化时重绘，避免 init() 之前调用导致 createRadialGradient(NaN) 抛错
+        if(state.length > 0){
+            drawMain(); drawPhase(); drawEnergy(); updateStats();
+        }
     }
     window.addEventListener('resize', resizeCanvases);
     resizeCanvases();
